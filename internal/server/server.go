@@ -5,8 +5,10 @@ import (
 	"net/http"
 )
 
+type Ruble int
+
 type BalanceDTO struct {
-	Value int
+	Value Ruble
 }
 
 type FinanceServer struct{}
