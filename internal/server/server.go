@@ -7,15 +7,17 @@ import (
 
 type Ruble int
 
-type BalanceDTO struct {
-	Value Ruble
+type User struct {
+	Balance Ruble
 }
 
-type FinanceServer struct{}
+func NewServer() *EnsureAuth {
+	return &EnsureAuth{ServeFinances}
+}
 
-func (f *FinanceServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func ServeFinances(w http.ResponseWriter, r *http.Request, u *User) {
 	w.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(BalanceDTO{1000})
+	err := json.NewEncoder(w).Encode(BalanceDTO{u.Balance})
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

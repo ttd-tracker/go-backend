@@ -8,7 +8,7 @@ import (
 )
 
 func TestFinanceServer(t *testing.T) {
-	svr := FinanceServer{}
+	svr := NewServer()
 
 	t.Run("get balance", func(t *testing.T) {
 		req := newBalanceRequest(t)
@@ -26,7 +26,7 @@ func TestFinanceServer(t *testing.T) {
 
 		want := Ruble(1000)
 		if got.Value != want {
-			t.Errorf("got balance %q want %q", got, want)
+			t.Errorf("got balance %d want %d", got.Value, want)
 		}
 	})
 }
@@ -68,12 +68,4 @@ func assertContentType(t testing.TB, res http.ResponseWriter, want string) {
 //	if res.Code != http.StatusCreated {
 //		t.Errorf("got status %d want %d", res.Code, http.StatusCreated)
 //	}
-//
-//	// в res.Body мне ничего не нужно, раз я получаю успешный код. как убедиться, что
-//	// баланс пользователя обновлён вне стора? как получить к нему доступ?
-//	// getBalance поможет в таком случае. я прекрасно знаю, что мне нужна сущность-хранилище.
-//
-//	// если есть getBalance, что я верну? нужный доход. если изначальный = 0, то конечный = начальный + значение,
-//	//	которое мы ввели. давай уж тогда сделаем гет беленс. это не во всех имплементациях будет дб оп, так что
-//	//	может быть полезен
 //})
