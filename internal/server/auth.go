@@ -11,8 +11,12 @@ type EnsureAuth struct {
 }
 
 func (e *EnsureAuth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// authorization code
-	e.handler(w, r, &User{0})
+	if r.Header.Get("Authorization") == "1" {
+		e.handler(w, r, &User{1000})
+		return
+	}
+
+	e.handler(w, r, &User{5000})
 }
 
 func NewEnsureAuth(handler AuthenticatedHandler) *EnsureAuth {

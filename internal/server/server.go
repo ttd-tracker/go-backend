@@ -12,16 +12,16 @@ type User struct {
 }
 
 func NewServer() *EnsureAuth {
-	return &EnsureAuth{ServeFinances}
+	return NewEnsureAuth(ServeFinances)
 }
 
 func ServeFinances(w http.ResponseWriter, r *http.Request, u *User) {
 	w.Header().Set("Content-Type", "application/json")
+
+	status := http.StatusOK
 	err := json.NewEncoder(w).Encode(BalanceDTO{u.Balance})
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		status = http.StatusInternalServerError
 	}
-
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(status)
 }

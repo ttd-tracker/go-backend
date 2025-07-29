@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -10,32 +9,48 @@ import (
 func TestFinanceServer(t *testing.T) {
 	svr := NewServer()
 
-	t.Run("get balance", func(t *testing.T) {
-		req := newBalanceRequest(t)
+	t.Run("get one's balance", func(t *testing.T) {
+		req := newBalanceRequest(t, "1")
 		res := httptest.NewRecorder()
-		svr.ServeHTTP(res, req)
 
+		svr.ServeHTTP(res, req)
 		assertStatus(t, res.Code, http.StatusOK)
 		assertContentType(t, res, "application/json")
 
-		var got BalanceDTO
-		err := json.NewDecoder(res.Body).Decode(&got)
-		if err != nil {
-			t.Fatalf("error decoding res: %v", err)
-		}
+		got, err := NewBalanceDTO(res.Body)
+		assertNoErr(t, err)
+		assertBalance(t, got.Value, Ruble(1000))
+	})
 
-		want := Ruble(1000)
-		if got.Value != want {
-			t.Errorf("got balance %d want %d", got.Value, want)
-		}
+	t.Run("get another's balance", func(t *testing.T) {
+		req := newBalanceRequest(t, "20")
+		res := httptest.NewRecorder()
+
+		svr.ServeHTTP(res, req)
+		assertStatus(t, res.Code, http.StatusOK)
+		assertContentType(t, res, "application/json")
+
+		got, err := NewBalanceDTO(res.Body)
+		assertNoErr(t, err)
+		assertBalance(t, got.Value, Ruble(5000))
 	})
 }
 
-func newBalanceRequest(t testing.TB) *http.Request {
+func assertBalance(t testing.TB, got, want Ruble) {
+	t.Helper()
+
+	if got != want {
+		t.Errorf("got balance %d want %d", got, want)
+	}
+}
+
+func newBalanceRequest(t testing.TB, id string) *http.Request {
 	req, err := http.NewRequest(http.MethodGet, "/balance", nil)
 	if err != nil {
 		t.Fatalf("error creating req: %v", err)
 	}
+
+	req.Header.Set("Authorization", id)
 
 	return req
 }
@@ -52,6 +67,14 @@ func assertContentType(t testing.TB, res http.ResponseWriter, want string) {
 	contentType := res.Header().Get("Content-Type")
 	if contentType != want {
 		t.Fatalf("got content-type %q want %q", contentType, want)
+	}
+}
+
+func assertNoErr(t testing.TB, err error) {
+	t.Helper()
+
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
