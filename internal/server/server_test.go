@@ -6,8 +6,20 @@ import (
 	"testing"
 )
 
+type StubStore struct {
+	database map[string]Ruble
+}
+
+func (s StubStore) GetUser(id string) User {
+	return User{s.database[id]}
+}
+
 func TestFinanceServer(t *testing.T) {
-	svr := NewServer()
+	store := StubStore{map[string]Ruble{
+		"1":  1000,
+		"20": 5000,
+	}}
+	svr := NewServer(store)
 
 	t.Run("get one's balance", func(t *testing.T) {
 		req := newBalanceRequest(t, "1")
@@ -77,18 +89,3 @@ func assertNoErr(t testing.TB, err error) {
 		t.Errorf("unexpected error: %s", err)
 	}
 }
-
-//t.Run("new income", func(t *testing.T) {
-//	svr := FinanceServer{}
-//
-//	req, err := http.NewRequest(http.MethodPost, "/op/income", nil)
-//	if err != nil {
-//		t.Fatalf("error creating req: %v", err)
-//	}
-//	res := httptest.NewRecorder()
-//	svr.ServeHTTP(res, req)
-//
-//	if res.Code != http.StatusCreated {
-//		t.Errorf("got status %d want %d", res.Code, http.StatusCreated)
-//	}
-//})

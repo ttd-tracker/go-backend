@@ -11,11 +11,15 @@ type User struct {
 	Balance Ruble
 }
 
-func NewServer() *EnsureAuth {
-	return NewEnsureAuth(ServeFinances)
+type FinanceStore interface {
+	GetUser(id string) User
 }
 
-func ServeFinances(w http.ResponseWriter, r *http.Request, u *User) {
+func NewServer(store FinanceStore) *EnsureAuth {
+	return NewEnsureAuth(ServeFinances, store)
+}
+
+func ServeFinances(w http.ResponseWriter, r *http.Request, u User) {
 	w.Header().Set("Content-Type", "application/json")
 
 	status := http.StatusOK
