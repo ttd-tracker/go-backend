@@ -48,6 +48,23 @@ func TestFinanceServer(t *testing.T) {
 	})
 }
 
+func TestIncome(t *testing.T) {
+	store := StubStore{map[string]Ruble{
+		"1":  1000,
+		"20": 5000,
+	}}
+	svr := NewServer(store)
+
+	req, err := http.NewRequest(http.MethodPost, "/op/income", nil)
+	assertNoErr(t, err)
+
+	res := httptest.NewRecorder()
+	svr.ServeHTTP(res, req)
+
+	assertStatus(t, res.Code, http.StatusCreated)
+	assertContentType(t, res, "application/json")
+}
+
 func assertBalance(t testing.TB, got, want Ruble) {
 	t.Helper()
 

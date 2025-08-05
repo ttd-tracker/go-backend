@@ -15,11 +15,21 @@ type FinanceStore interface {
 	GetUser(id string) User
 }
 
-func NewServer(store FinanceStore) *EnsureAuth {
-	return NewEnsureAuth(ServeFinances, store)
+type FinanceServer struct {
+	http.Handler
+	store FinanceStore
 }
 
-func ServeFinances(w http.ResponseWriter, r *http.Request, u User) {
+func NewServer(store FinanceStore) FinanceServer {
+	svr := FinanceServer{store: store}
+	mux := http.NewServeMux()
+	mux.Handle("/balance", NewEnsureAuth(svr.ExtractBalance, store))
+	mux.Handle("/op/income", NewEnsureAuth(svr.RecordIncome, store))
+	svr.Handler = mux
+	return svr
+}
+
+func (f *FinanceServer) ExtractBalance(w http.ResponseWriter, r *http.Request, u User) {
 	w.Header().Set("Content-Type", "application/json")
 
 	status := http.StatusOK
@@ -28,4 +38,11 @@ func ServeFinances(w http.ResponseWriter, r *http.Request, u User) {
 		status = http.StatusInternalServerError
 	}
 	w.WriteHeader(status)
+}
+
+// RecordIncome should write income and return actual balance
+func (f *FinanceServer) RecordIncome(w http.ResponseWriter, r *http.Request, u User) {
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusCreated)
 }
