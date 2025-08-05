@@ -55,14 +55,22 @@ func TestIncome(t *testing.T) {
 	}}
 	svr := NewServer(store)
 
-	req, err := http.NewRequest(http.MethodPost, "/op/income", nil)
-	assertNoErr(t, err)
+	t.Run("income to user 1", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, "/op/income/500", nil)
+		assertNoErr(t, err)
+		req.Header.Set("Authorization", "1")
 
-	res := httptest.NewRecorder()
-	svr.ServeHTTP(res, req)
+		res := httptest.NewRecorder()
+		svr.ServeHTTP(res, req)
 
-	assertStatus(t, res.Code, http.StatusCreated)
-	assertContentType(t, res, "application/json")
+		assertStatus(t, res.Code, http.StatusCreated)
+		assertContentType(t, res, "application/json")
+
+		got, err := NewBalanceDTO(res.Body)
+		assertNoErr(t, err)
+
+		assertBalance(t, got.Value, 1500)
+	})
 }
 
 func assertBalance(t testing.TB, got, want Ruble) {
