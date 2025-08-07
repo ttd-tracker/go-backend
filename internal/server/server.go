@@ -9,11 +9,13 @@ import (
 type Ruble int
 
 type User struct {
+	Id      int
 	Balance Ruble
 }
 
 type FinanceStore interface {
-	GetUser(id string) User
+	GetUser(id int) User
+	RecordIncome(id int, income Ruble) Ruble
 }
 
 type FinanceServer struct {
@@ -23,30 +25,31 @@ type FinanceServer struct {
 
 func NewServer(store FinanceStore) FinanceServer {
 	svr := FinanceServer{store: store}
+
 	mux := http.NewServeMux()
 	mux.Handle("GET /balance", NewEnsureAuth(svr.ExtractBalance, store))
 	mux.Handle("POST /op/income/{ruble}", NewEnsureAuth(svr.RecordIncome, store))
+
 	svr.Handler = mux
 	return svr
 }
 
-func (f *FinanceServer) ExtractBalance(w http.ResponseWriter, r *http.Request, u User) {
+func (f *FinanceServer) ExtractBalance(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(BalanceDTO{u.Balance})
+	_ = json.NewEncoder(w).Encode(BalanceDTO{user.Balance})
 }
 
-// RecordIncome should write income and return actual balance
-func (f *FinanceServer) RecordIncome(w http.ResponseWriter, r *http.Request, u User) {
+func (f *FinanceServer) RecordIncome(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 
-	pathValue := r.PathValue("ruble")
-	income, err := strconv.Atoi(pathValue)
+	income, err := strconv.Atoi(r.PathValue("ruble"))
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	balance := f.store.RecordIncome(user.Id, Ruble(income))
 
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(BalanceDTO{Ruble(income) + u.Balance})
+	_ = json.NewEncoder(w).Encode(BalanceDTO{balance})
 }
