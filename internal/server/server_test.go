@@ -6,10 +6,18 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 )
+
+type Operation struct {
+	Money Ruble
+	Time  time.Time
+	Type  string // to be enum
+}
 
 type StubStore struct {
 	database map[int]Ruble
+	history  []Operation
 }
 
 func (s StubStore) GetUser(id int) User {
@@ -22,7 +30,7 @@ func (s StubStore) RecordIncome(id int, income Ruble) Ruble {
 }
 
 func TestFinanceServer(t *testing.T) {
-	store := StubStore{map[int]Ruble{
+	store := StubStore{database: map[int]Ruble{
 		1:  1000,
 		20: 5000,
 	}}
@@ -54,30 +62,41 @@ func TestFinanceServer(t *testing.T) {
 }
 
 func TestIncome(t *testing.T) {
-	store := StubStore{map[int]Ruble{
+	store := StubStore{database: map[int]Ruble{
 		1:  1000,
 		20: 5000,
 	}}
 	svr := NewServer(store)
 
 	t.Run("income to user 1", func(t *testing.T) {
-		req := newIncomeRequest(t, 1, 500)
+		id := 1
+		req := newIncomeRequest(t, id, 500)
 		res := httptest.NewRecorder()
 		svr.ServeHTTP(res, req)
 		assertStatus(t, res.Code, http.StatusCreated)
 		assertContentType(t, res, "application/json")
+		assertBalance(t, store.database[id], 1500)
 
-		got, err := NewBalanceDTO(res.Body)
-		assertNoErr(t, err)
-		assertBalance(t, got.Value, 1500)
-
-		req = newIncomeRequest(t, 1, 500)
+		req = newIncomeRequest(t, id, 500)
 		res = httptest.NewRecorder()
 		svr.ServeHTTP(res, req)
+		assertBalance(t, store.database[id], 2000)
 
-		got, err = NewBalanceDTO(res.Body)
-		assertNoErr(t, err)
-		assertBalance(t, got.Value, 2000)
+		if len(store.history) == 0 {
+			t.Fatalf("history is empty")
+		}
+
+		if time.Since(store.history[0].Time) > (5 * time.Second) {
+			t.Errorf("history: op 1: since op %v passed too much time", store.history[0].Time)
+		}
+
+		if store.history[0].Money != 500 {
+			t.Errorf("history: op 1: got money %d want 500", store.history[0].Money)
+		}
+
+		if store.history[0].Type != "income" {
+			t.Errorf("history: op 1: got Type %s want %q", store.history[0].Type, "income")
+		}
 	})
 }
 
