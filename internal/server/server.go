@@ -6,8 +6,6 @@ import (
 	"strconv"
 )
 
-type Ruble int
-
 type User struct {
 	Id      int
 	Balance Ruble
@@ -15,7 +13,8 @@ type User struct {
 
 type FinanceStore interface {
 	GetUser(id int) User
-	RecordIncome(id int, income Ruble) Ruble
+	AddIncome(id int, income Ruble) Ruble
+	recordOp(Op)
 }
 
 type FinanceServer struct {
@@ -28,7 +27,7 @@ func NewServer(store FinanceStore) FinanceServer {
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /balance", NewEnsureAuth(svr.ExtractBalance, store))
-	mux.Handle("POST /op/income/{ruble}", NewEnsureAuth(svr.RecordIncome, store))
+	mux.Handle("POST /op/income/{ruble}", NewEnsureAuth(svr.AddIncome, store))
 
 	svr.Handler = mux
 	return svr
@@ -40,7 +39,7 @@ func (f *FinanceServer) ExtractBalance(w http.ResponseWriter, r *http.Request, u
 	_ = json.NewEncoder(w).Encode(BalanceDTO{user.Balance})
 }
 
-func (f *FinanceServer) RecordIncome(w http.ResponseWriter, r *http.Request, user User) {
+func (f *FinanceServer) AddIncome(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 
 	income, err := strconv.Atoi(r.PathValue("ruble"))
@@ -48,7 +47,7 @@ func (f *FinanceServer) RecordIncome(w http.ResponseWriter, r *http.Request, use
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	balance := f.store.RecordIncome(user.Id, Ruble(income))
+	balance := f.store.AddIncome(user.Id, Ruble(income))
 
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(BalanceDTO{balance})

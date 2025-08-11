@@ -9,24 +9,23 @@ import (
 	"time"
 )
 
-type Operation struct {
-	Money Ruble
-	Time  time.Time
-	Type  string // to be enum
-}
-
 type StubStore struct {
 	database map[int]Ruble
-	history  []Operation
+	history  []Op
 }
 
-func (s StubStore) GetUser(id int) User {
+func (s *StubStore) GetUser(id int) User {
 	return User{id, s.database[id]}
 }
 
-func (s StubStore) RecordIncome(id int, income Ruble) Ruble {
+func (s *StubStore) AddIncome(id int, income Ruble) Ruble {
 	s.database[id] += income
+	s.recordOp(Op{income, time.Now(), OpIncome})
 	return s.database[id]
+}
+
+func (s *StubStore) recordOp(op Op) {
+	s.history = append(s.history, op)
 }
 
 func TestFinanceServer(t *testing.T) {
@@ -34,7 +33,7 @@ func TestFinanceServer(t *testing.T) {
 		1:  1000,
 		20: 5000,
 	}}
-	svr := NewServer(store)
+	svr := NewServer(&store)
 
 	t.Run("get one's balance", func(t *testing.T) {
 		req := newBalanceRequest(t, 1)
@@ -66,7 +65,7 @@ func TestIncome(t *testing.T) {
 		1:  1000,
 		20: 5000,
 	}}
-	svr := NewServer(store)
+	svr := NewServer(&store)
 
 	t.Run("income to user 1", func(t *testing.T) {
 		id := 1
@@ -77,9 +76,7 @@ func TestIncome(t *testing.T) {
 		assertContentType(t, res, "application/json")
 		assertBalance(t, store.database[id], 1500)
 
-		req = newIncomeRequest(t, id, 500)
-		res = httptest.NewRecorder()
-		svr.ServeHTTP(res, req)
+		svr.ServeHTTP(httptest.NewRecorder(), newIncomeRequest(t, id, 500))
 		assertBalance(t, store.database[id], 2000)
 
 		if len(store.history) == 0 {
@@ -94,8 +91,8 @@ func TestIncome(t *testing.T) {
 			t.Errorf("history: op 1: got money %d want 500", store.history[0].Money)
 		}
 
-		if store.history[0].Type != "income" {
-			t.Errorf("history: op 1: got Type %s want %q", store.history[0].Type, "income")
+		if store.history[0].Type != OpIncome {
+			t.Errorf("history: op 1: got Type %d want %q", store.history[0].Type, "income")
 		}
 	})
 }
