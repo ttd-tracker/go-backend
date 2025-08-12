@@ -29,16 +29,15 @@ func (s *StubStore) recordOp(op Op) {
 }
 
 func TestFinanceServer(t *testing.T) {
-	store := StubStore{database: map[int]Ruble{
+	store := &StubStore{database: map[int]Ruble{
 		1:  1000,
 		20: 5000,
 	}}
-	svr := NewServer(&store)
+	svr := NewServer(store)
 
 	t.Run("get one's balance", func(t *testing.T) {
-		req := newBalanceRequest(t, 1)
 		res := httptest.NewRecorder()
-		svr.ServeHTTP(res, req)
+		svr.ServeHTTP(res, newBalanceRequest(t, 1))
 		assertStatus(t, res.Code, http.StatusOK)
 		assertContentType(t, res, "application/json")
 
@@ -48,9 +47,8 @@ func TestFinanceServer(t *testing.T) {
 	})
 
 	t.Run("get another's balance", func(t *testing.T) {
-		req := newBalanceRequest(t, 20)
 		res := httptest.NewRecorder()
-		svr.ServeHTTP(res, req)
+		svr.ServeHTTP(res, newBalanceRequest(t, 20))
 		assertStatus(t, res.Code, http.StatusOK)
 		assertContentType(t, res, "application/json")
 
@@ -61,17 +59,16 @@ func TestFinanceServer(t *testing.T) {
 }
 
 func TestIncome(t *testing.T) {
-	store := StubStore{database: map[int]Ruble{
+	store := &StubStore{database: map[int]Ruble{
 		1:  1000,
 		20: 5000,
 	}}
-	svr := NewServer(&store)
+	svr := NewServer(store)
 
 	t.Run("income to user 1", func(t *testing.T) {
 		id := 1
-		req := newIncomeRequest(t, id, 500)
 		res := httptest.NewRecorder()
-		svr.ServeHTTP(res, req)
+		svr.ServeHTTP(res, newIncomeRequest(t, id, 500))
 		assertStatus(t, res.Code, http.StatusCreated)
 		assertContentType(t, res, "application/json")
 		assertBalance(t, store.database[id], 1500)

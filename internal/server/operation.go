@@ -7,11 +7,11 @@ type Ruble int
 type Op struct {
 	Money Ruble
 	Time  time.Time
-	Type  opType // to be enum
+	Type  OpType
 }
 
-type opType int
+type OpType int
 
 const (
-	OpIncome opType = iota
+	OpIncome OpType = iota
 )

@@ -14,7 +14,6 @@ type User struct {
 type FinanceStore interface {
 	GetUser(id int) User
 	AddIncome(id int, income Ruble) Ruble
-	recordOp(Op)
 }
 
 type FinanceServer struct {
@@ -22,7 +21,7 @@ type FinanceServer struct {
 	store FinanceStore
 }
 
-func NewServer(store FinanceStore) FinanceServer {
+func NewServer(store FinanceStore) *FinanceServer {
 	svr := FinanceServer{store: store}
 
 	mux := http.NewServeMux()
@@ -30,7 +29,7 @@ func NewServer(store FinanceStore) FinanceServer {
 	mux.Handle("POST /op/income/{ruble}", NewEnsureAuth(svr.AddIncome, store))
 
 	svr.Handler = mux
-	return svr
+	return &svr
 }
 
 func (f *FinanceServer) ExtractBalance(w http.ResponseWriter, r *http.Request, user User) {
