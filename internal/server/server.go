@@ -35,19 +35,19 @@ func NewServer(store FinanceStore) *FinanceServer {
 func (f *FinanceServer) ExtractBalance(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(w).Encode(BalanceDTO{user.Balance})
+	_ = json.NewEncoder(w).Encode(BalanceDTO{user.Balance.Value()})
 }
 
 func (f *FinanceServer) AddIncome(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 
-	income, err := strconv.Atoi(r.PathValue("ruble"))
+	income, err := strconv.ParseFloat(r.PathValue("ruble"), 64)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	balance := f.store.AddIncome(user.Id, Ruble(income))
+	balance := f.store.AddIncome(user.Id, NewRuble(income))
 
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(BalanceDTO{balance})
+	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Value()})
 }
