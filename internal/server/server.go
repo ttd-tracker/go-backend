@@ -16,6 +16,7 @@ type FinanceStore interface {
 	AddIncome(id int, income Ruble) Ruble
 }
 
+// Which methods must contain FinanceServer?
 type FinanceServer struct {
 	http.Handler
 	store FinanceStore
@@ -25,20 +26,21 @@ func NewServer(store FinanceStore) *FinanceServer {
 	svr := FinanceServer{store: store}
 
 	mux := http.NewServeMux()
-	mux.Handle("GET /balance", NewEnsureAuth(svr.ExtractBalance, store))
-	mux.Handle("POST /op/income/{ruble}", NewEnsureAuth(svr.AddIncome, store))
+	mux.Handle("GET /balance", NewEnsureAuth(extractBalance, store))
+	mux.Handle("POST /op/income/{ruble}", NewEnsureAuth(svr.addIncome, store))
+	mux.Handle("POST /op/expense/{ruble}", NewEnsureAuth(svr.addExpense, store))
 
 	svr.Handler = mux
 	return &svr
 }
 
-func (f *FinanceServer) ExtractBalance(w http.ResponseWriter, r *http.Request, user User) {
+func extractBalance(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(BalanceDTO{user.Balance.Value()})
 }
 
-func (f *FinanceServer) AddIncome(w http.ResponseWriter, r *http.Request, user User) {
+func (f *FinanceServer) addIncome(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 
 	income, err := strconv.ParseFloat(r.PathValue("ruble"), 64)
@@ -50,4 +52,8 @@ func (f *FinanceServer) AddIncome(w http.ResponseWriter, r *http.Request, user U
 
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Value()})
+}
+
+func (f *FinanceServer) addExpense(w http.ResponseWriter, r *http.Request, user User) {
+	w.WriteHeader(http.StatusCreated)
 }
