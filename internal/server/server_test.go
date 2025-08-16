@@ -26,6 +26,11 @@ func (s *StubStore) AddIncome(id int, income Ruble) Ruble {
 	return s.database[id]
 }
 
+func (s *StubStore) AddExpense(id int, expense Ruble) Ruble {
+	s.database[id] = s.database[id].Sub(expense)
+	return s.database[id]
+}
+
 func (s *StubStore) recordOp(op Op) {
 	s.history = append(s.history, op)
 }

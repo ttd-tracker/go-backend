@@ -14,6 +14,7 @@ type User struct {
 type FinanceStore interface {
 	GetUser(id int) User
 	AddIncome(id int, income Ruble) Ruble
+	AddExpense(id int, expense Ruble) Ruble
 }
 
 // Which methods must contain FinanceServer?
@@ -44,6 +45,7 @@ func (f *FinanceServer) addIncome(w http.ResponseWriter, r *http.Request, user U
 	w.Header().Set("Content-Type", "application/json")
 
 	income, err := strconv.ParseFloat(r.PathValue("ruble"), 64)
+	// tests are not providing this scenario
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -58,11 +60,12 @@ func (f *FinanceServer) addExpense(w http.ResponseWriter, r *http.Request, user 
 	w.Header().Set("Content-Type", "application/json")
 
 	expense, _ := strconv.ParseFloat(r.PathValue("ruble"), 64)
+	balance := f.store.AddExpense(user.Id, NewRuble(expense))
 	//if err != nil {
 	//	w.WriteHeader(http.StatusBadRequest)
 	//	return
 	//}
 
 	w.WriteHeader(http.StatusCreated)
-	_ = json.NewEncoder(w).Encode(BalanceDTO{user.Balance.Float64() - expense})
+	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Float64()})
 }

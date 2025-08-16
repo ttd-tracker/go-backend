@@ -22,11 +22,11 @@ func TestExpense(t *testing.T) {
 	svr.ServeHTTP(res, newExpenseRequest(t, id, 150))
 	assertStatus(t, res.Code, http.StatusCreated)
 	assertContentType(t, res, "application/json")
+
 	got, err := newBalanceDTOFromResponse(res.Body)
 	assertNoErr(t, err)
 	assertBalance(t, got.Money, 4850)
-
-	//assertBalance(t, store.database[20].Float64(), 4850)
+	assertBalance(t, store.database[20].Float64(), 4850)
 }
 
 func newExpenseRequest(t *testing.T, id int, money float64) *http.Request {

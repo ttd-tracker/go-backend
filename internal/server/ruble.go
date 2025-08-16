@@ -19,3 +19,8 @@ func (r Ruble) Add(r2 Ruble) Ruble {
 	sum, _ := r.decimal.Add(r2.decimal).Float64()
 	return NewRuble(sum)
 }
+
+func (r Ruble) Sub(r2 Ruble) Ruble {
+	sub, _ := r.decimal.Sub(r2.decimal).Float64()
+	return NewRuble(sub)
+}
