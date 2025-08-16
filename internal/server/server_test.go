@@ -72,10 +72,10 @@ func TestIncome(t *testing.T) {
 	svr.ServeHTTP(res, newIncomeRequest(t, id, 500))
 	assertStatus(t, res.Code, http.StatusCreated)
 	assertContentType(t, res, "application/json")
-	assertBalance(t, store.database[id].Value(), 1500)
+	assertBalance(t, store.database[id].Float64(), 1500)
 
 	svr.ServeHTTP(httptest.NewRecorder(), newIncomeRequest(t, id, 500))
-	assertBalance(t, store.database[id].Value(), 2000)
+	assertBalance(t, store.database[id].Float64(), 2000)
 
 	if len(store.history) == 0 {
 		t.Fatalf("history is empty")
@@ -83,8 +83,8 @@ func TestIncome(t *testing.T) {
 	if time.Since(store.history[0].Time) > (5 * time.Second) {
 		t.Errorf("history: op 1: since op %v passed too much time", store.history[0].Time)
 	}
-	if store.history[0].Ruble.Value() != 500 {
-		t.Errorf("history: op 1: got money %.2f want 500", store.history[0].Ruble.Value())
+	if store.history[0].Ruble.Float64() != 500 {
+		t.Errorf("history: op 1: got money %.2f want 500", store.history[0].Ruble.Float64())
 	}
 	if store.history[0].Type != OpIncome {
 		t.Errorf("history: op 1: got Type %d want %q", store.history[0].Type, "income")

@@ -10,7 +10,7 @@ func TestRuble(t *testing.T) {
 		b := NewRuble(.2)
 
 		sum := a.Add(b)
-		if sum.Value() != .3 {
+		if sum.Float64() != .3 {
 			t.Errorf("got %v want 0.3", sum)
 		}
 	})

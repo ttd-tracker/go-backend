@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+// to be
+// addExpense subtracts given money from store and returns BalanceDTO with user updated balance
 func TestExpense(t *testing.T) {
 	store := &StubStore{database: map[int]Ruble{
 		1:  NewRuble(1000),
@@ -16,9 +18,15 @@ func TestExpense(t *testing.T) {
 	svr := NewServer(store)
 
 	res := httptest.NewRecorder()
-	svr.ServeHTTP(res, newExpenseRequest(t, 20, 150))
+	id := 20
+	svr.ServeHTTP(res, newExpenseRequest(t, id, 150))
 	assertStatus(t, res.Code, http.StatusCreated)
-	//assertBalance(t, store.database[20].Value(), 4850)
+	assertContentType(t, res, "application/json")
+	got, err := newBalanceDTOFromResponse(res.Body)
+	assertNoErr(t, err)
+	assertBalance(t, got.Money, 4850)
+
+	//assertBalance(t, store.database[20].Float64(), 4850)
 }
 
 func newExpenseRequest(t *testing.T, id int, money float64) *http.Request {

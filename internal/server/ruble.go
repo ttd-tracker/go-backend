@@ -10,7 +10,7 @@ func NewRuble(value float64) Ruble {
 	return Ruble{decimal.NewFromFloat(value)}
 }
 
-func (r Ruble) Value() float64 {
+func (r Ruble) Float64() float64 {
 	value, _ := r.decimal.Float64()
 	return value
 }
