@@ -15,7 +15,7 @@ type EnsureAuth struct {
 func (e *EnsureAuth) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(r.Header.Get("Authorization"))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
 	// no check whether a user exists

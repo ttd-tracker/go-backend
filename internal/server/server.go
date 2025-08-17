@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 )
@@ -28,8 +29,8 @@ func NewServer(store FinanceStore) *FinanceServer {
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /balance", NewEnsureAuth(extractBalance, store))
-	mux.Handle("POST /op/income/{ruble}", NewEnsureAuth(svr.addIncome, store))
-	mux.Handle("POST /op/expense/{ruble}", NewEnsureAuth(svr.addExpense, store))
+	mux.Handle("POST /op/income/{cash}", NewEnsureAuth(svr.addIncome, store))
+	mux.Handle("POST /op/expense/{cash}", NewEnsureAuth(svr.addExpense, store))
 
 	svr.Handler = mux
 	return &svr
@@ -44,14 +45,14 @@ func extractBalance(w http.ResponseWriter, r *http.Request, user *User) {
 func (f *FinanceServer) addIncome(w http.ResponseWriter, r *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 
-	income, err := strconv.ParseFloat(r.PathValue("ruble"), 64)
+	income, err := strconv.ParseFloat(r.PathValue("cash"), 64)
 	// tests are not providing this scenario
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	balance := f.store.AddIncome(user.Id, NewRuble(income))
 
+	balance := f.store.AddIncome(user.Id, NewRuble(income))
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Float64()})
 }
@@ -60,13 +61,27 @@ func (f *FinanceServer) addIncome(w http.ResponseWriter, r *http.Request, user *
 func (f *FinanceServer) addExpense(w http.ResponseWriter, r *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 
-	expense, _ := strconv.ParseFloat(r.PathValue("ruble"), 64)
-	balance := f.store.AddExpense(user.Id, NewRuble(expense))
-	//if err != nil {
-	//	w.WriteHeader(http.StatusBadRequest)
-	//	return
-	//}
+	expense, err := getCashPathParameter(r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
+	balance := f.store.AddExpense(user.Id, expense)
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Float64()})
+}
+
+var ErrZeroCash = errors.New("cash is zero")
+
+func getCashPathParameter(r *http.Request) (Ruble, error) {
+	cash, err := strconv.ParseFloat(r.PathValue("cash"), 64)
+	if err != nil {
+		return NewRuble(0), err
+	}
+	if cash == 0 {
+		return NewRuble(0), ErrZeroCash
+	}
+
+	return NewRuble(cash), nil
 }
