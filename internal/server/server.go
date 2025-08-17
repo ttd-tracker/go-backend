@@ -18,7 +18,6 @@ type FinanceStore interface {
 	AddExpense(id int, expense Ruble) Ruble
 }
 
-// Which methods must contain FinanceServer?
 type FinanceServer struct {
 	http.Handler
 	store FinanceStore
@@ -57,7 +56,7 @@ func (f *FinanceServer) addIncome(w http.ResponseWriter, r *http.Request, user *
 	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Float64()})
 }
 
-// addExpense subtracts given amount from store balance and returns BalanceDTO with user updated balance
+// addExpense subtracts given amount from store balance, records new Op and returns BalanceDTO with user updated balance
 func (f *FinanceServer) addExpense(w http.ResponseWriter, r *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 

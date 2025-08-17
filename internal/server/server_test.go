@@ -21,12 +21,13 @@ func (s *StubStore) GetUser(id int) *User {
 
 func (s *StubStore) AddIncome(id int, income Ruble) Ruble {
 	s.db[id].Balance = s.db[id].Balance.Add(income)
-	s.recordOp(id, Op{income, time.Now(), OpIncome})
+	s.recordOp(id, NewOp(income, OpIncome))
 	return s.db[id].Balance
 }
 
 func (s *StubStore) AddExpense(id int, expense Ruble) Ruble {
 	s.db[id].Balance = s.db[id].Balance.Sub(expense)
+	s.recordOp(id, NewOp(expense, OpExpense))
 	return s.db[id].Balance
 }
 
@@ -51,7 +52,7 @@ func TestExtractBalance(t *testing.T) {
 
 		got, err := newBalanceDTOFromResponse(res.Body)
 		assertNoErr(t, err)
-		assertBalance(t, got.Money, 1000)
+		assertBalance(t, got.Cash, 1000)
 	})
 
 	t.Run("get another's balance", func(t *testing.T) {
@@ -62,7 +63,7 @@ func TestExtractBalance(t *testing.T) {
 
 		got, err := newBalanceDTOFromResponse(res.Body)
 		assertNoErr(t, err)
-		assertBalance(t, got.Money, 5000)
+		assertBalance(t, got.Cash, 5000)
 	})
 }
 
@@ -84,29 +85,11 @@ func TestIncome(t *testing.T) {
 
 	svr.ServeHTTP(httptest.NewRecorder(), newIncomeRequest(t, id, 500))
 	assertBalance(t, store.db[id].Balance.Float64(), 2000)
-
-	if len(store.db[id].History) == 0 {
-		t.Fatalf("history is empty")
-	}
-	if time.Since(store.db[id].History[0].Time) > (5 * time.Second) {
-		t.Errorf("history: op 1: since op %v passed too much time", store.db[id].History[0].Time)
-	}
-	if store.db[id].History[0].Ruble.Float64() != 500 {
-		t.Errorf("history: op 1: got money %.2f want 500", store.db[id].History[0].Ruble.Float64())
-	}
-	if store.db[id].History[0].Type != OpIncome {
-		t.Errorf("history: op 1: got Type %d want %q", store.db[id].History[0].Type, "income")
-	}
+	assertHistoryOp(t, store.db[id].History, 500, OpIncome)
 
 	if len(store.db[20].History) != 0 {
 		t.Errorf("user 20 op history is not empty")
 	}
-}
-
-func newBalanceDTOFromResponse(rdr io.Reader) (BalanceDTO, error) {
-	var result BalanceDTO
-	err := json.NewDecoder(rdr).Decode(&result)
-	return result, err
 }
 
 func newBalanceRequest(t *testing.T, id int) *http.Request {
@@ -121,6 +104,29 @@ func newIncomeRequest(t *testing.T, id int, income float64) *http.Request {
 	assertNoErr(t, err)
 	req.Header.Set("Authorization", strconv.Itoa(id))
 	return req
+}
+
+func newBalanceDTOFromResponse(rdr io.Reader) (BalanceDTO, error) {
+	var result BalanceDTO
+	err := json.NewDecoder(rdr).Decode(&result)
+	return result, err
+}
+
+func assertHistoryOp(t testing.TB, history []Op, cash float64, opType OpType) {
+	t.Helper()
+
+	if len(history) == 0 {
+		t.Fatalf("history is empty")
+	}
+	if time.Since(history[0].Time) > (5 * time.Second) {
+		t.Errorf("history: op 1: since op %v passed too much time", history[0].Time)
+	}
+	if history[0].Cash.Float64() != cash {
+		t.Errorf("history: op 1: got cash %.2f want %.2f", history[0].Cash.Float64(), cash)
+	}
+	if history[0].Type != opType {
+		t.Errorf("history: op 1: got Type %d want %d", history[0].Type, opType)
+	}
 }
 
 func assertBalance(t testing.TB, got, want float64) {

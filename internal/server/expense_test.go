@@ -25,12 +25,14 @@ func TestExpense(t *testing.T) {
 
 	got, err := newBalanceDTOFromResponse(res.Body)
 	assertNoErr(t, err)
-	assertBalance(t, got.Money, 4850)
+	assertBalance(t, got.Cash, 4850)
 	assertBalance(t, store.db[20].Balance.Float64(), 4850)
+
+	assertHistoryOp(t, store.db[id].History, 150, OpExpense)
 }
 
-func newExpenseRequest(t *testing.T, id int, money float64) *http.Request {
-	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/op/expense/%.2f", money), nil)
+func newExpenseRequest(t *testing.T, id int, cash float64) *http.Request {
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/op/expense/%.2f", cash), nil)
 	assertNoErr(t, err)
 	req.Header.Set("Authorization", strconv.Itoa(id))
 
