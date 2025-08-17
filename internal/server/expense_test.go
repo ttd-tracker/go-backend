@@ -18,8 +18,8 @@ func TestExpense(t *testing.T) {
 	svr := NewServer(store)
 
 	t.Run("happy path", func(t *testing.T) {
-		res := httptest.NewRecorder()
 		id := 20
+		res := httptest.NewRecorder()
 		svr.ServeHTTP(res, newExpenseRequest(t, id, 150))
 		assertStatus(t, res.Code, http.StatusCreated)
 		assertContentType(t, res, "application/json")
