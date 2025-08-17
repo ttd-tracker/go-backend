@@ -45,14 +45,13 @@ func extractBalance(w http.ResponseWriter, r *http.Request, user *User) {
 func (f *FinanceServer) addIncome(w http.ResponseWriter, r *http.Request, user *User) {
 	w.Header().Set("Content-Type", "application/json")
 
-	income, err := strconv.ParseFloat(r.PathValue("cash"), 64)
-	// tests are not providing this scenario
+	income, err := getCashPathParameter(r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	balance := f.store.AddIncome(user.Id, NewRuble(income))
+	balance := f.store.AddIncome(user.Id, income)
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Float64()})
 }

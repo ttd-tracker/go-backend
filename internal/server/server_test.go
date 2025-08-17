@@ -76,20 +76,44 @@ func TestIncome(t *testing.T) {
 	}
 	svr := NewServer(store)
 
-	id := 1
-	res := httptest.NewRecorder()
-	svr.ServeHTTP(res, newIncomeRequest(t, id, 500))
-	assertStatus(t, res.Code, http.StatusCreated)
-	assertContentType(t, res, "application/json")
-	assertBalance(t, store.db[id].Balance.Float64(), 1500)
+	t.Run("happy path", func(t *testing.T) {
+		id := 1
+		res := httptest.NewRecorder()
+		svr.ServeHTTP(res, newIncomeRequest(t, id, 500))
+		assertStatus(t, res.Code, http.StatusCreated)
+		assertContentType(t, res, "application/json")
 
-	svr.ServeHTTP(httptest.NewRecorder(), newIncomeRequest(t, id, 500))
-	assertBalance(t, store.db[id].Balance.Float64(), 2000)
-	assertHistoryOp(t, store.db[id].History, 500, OpIncome)
+		got, err := newBalanceDTOFromResponse(res.Body)
+		assertNoErr(t, err)
+		assertBalance(t, got.Cash, 1500)
+		assertBalance(t, store.db[id].Balance.Float64(), 1500)
 
-	if len(store.db[20].History) != 0 {
-		t.Errorf("user 20 op history is not empty")
-	}
+		svr.ServeHTTP(httptest.NewRecorder(), newIncomeRequest(t, id, 500))
+		assertBalance(t, store.db[id].Balance.Float64(), 2000)
+		assertHistoryOp(t, store.db[id].History, 500, OpIncome)
+
+		if len(store.db[20].History) != 0 {
+			t.Errorf("user 20 op history is not empty")
+		}
+	})
+
+	t.Run("not number cash", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/op/income/abed", nil)
+		req.Header.Set("Authorization", strconv.Itoa(1))
+		res := httptest.NewRecorder()
+		svr.ServeHTTP(res, req)
+
+		assertStatus(t, res.Code, http.StatusBadRequest)
+	})
+
+	t.Run("zero cash", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/op/income/0", nil)
+		req.Header.Set("Authorization", strconv.Itoa(1))
+		res := httptest.NewRecorder()
+		svr.ServeHTTP(res, req)
+
+		assertStatus(t, res.Code, http.StatusBadRequest)
+	})
 }
 
 func newBalanceRequest(t *testing.T, id int) *http.Request {
