@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-type AuthenticatedHandler func(http.ResponseWriter, *http.Request, User)
+type AuthenticatedHandler func(http.ResponseWriter, *http.Request, *User)
 
 type EnsureAuth struct {
 	handler AuthenticatedHandler

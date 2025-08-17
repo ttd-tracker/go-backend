@@ -9,10 +9,12 @@ import (
 )
 
 func TestExpense(t *testing.T) {
-	store := &StubStore{database: map[int]Ruble{
-		1:  NewRuble(1000),
-		20: NewRuble(5000),
-	}}
+	store := &StubStore{
+		db: map[int]*User{
+			1:  {1, NewRuble(1000), []Op{}},
+			20: {20, NewRuble(5000), []Op{}},
+		},
+	}
 	svr := NewServer(store)
 
 	res := httptest.NewRecorder()
@@ -24,7 +26,7 @@ func TestExpense(t *testing.T) {
 	got, err := newBalanceDTOFromResponse(res.Body)
 	assertNoErr(t, err)
 	assertBalance(t, got.Money, 4850)
-	assertBalance(t, store.database[20].Float64(), 4850)
+	assertBalance(t, store.db[20].Balance.Float64(), 4850)
 }
 
 func newExpenseRequest(t *testing.T, id int, money float64) *http.Request {

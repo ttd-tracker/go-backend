@@ -11,38 +11,35 @@ import (
 	"time"
 )
 
-// database and history should be merged, bc it has the same key and related to a single user
 type StubStore struct {
-	database map[int]Ruble
-	history  map[int][]Op
+	db map[int]*User
 }
 
-func (s *StubStore) GetUser(id int) User {
-	return User{id, s.database[id]}
+func (s *StubStore) GetUser(id int) *User {
+	return s.db[id]
 }
 
 func (s *StubStore) AddIncome(id int, income Ruble) Ruble {
-	s.database[id] = s.database[id].Add(income)
+	s.db[id].Balance = s.db[id].Balance.Add(income)
 	s.recordOp(id, Op{income, time.Now(), OpIncome})
-	return s.database[id]
+	return s.db[id].Balance
 }
 
 func (s *StubStore) AddExpense(id int, expense Ruble) Ruble {
-	s.database[id] = s.database[id].Sub(expense)
-	return s.database[id]
+	s.db[id].Balance = s.db[id].Balance.Sub(expense)
+	return s.db[id].Balance
 }
 
 func (s *StubStore) recordOp(id int, op Op) {
-	s.history[id] = append(s.history[id], op)
+	s.db[id].History = append(s.db[id].History, op)
 }
 
 func TestExtractBalance(t *testing.T) {
 	store := &StubStore{
-		database: map[int]Ruble{
-			1:  NewRuble(1000),
-			20: NewRuble(5000),
+		db: map[int]*User{
+			1:  {1, NewRuble(1000), []Op{}},
+			20: {20, NewRuble(5000), []Op{}},
 		},
-		history: make(map[int][]Op),
 	}
 	svr := NewServer(store)
 
@@ -71,11 +68,10 @@ func TestExtractBalance(t *testing.T) {
 
 func TestIncome(t *testing.T) {
 	store := &StubStore{
-		database: map[int]Ruble{
-			1:  NewRuble(1000),
-			20: NewRuble(5000),
+		db: map[int]*User{
+			1:  {1, NewRuble(1000), []Op{}},
+			20: {20, NewRuble(5000), []Op{}},
 		},
-		history: make(map[int][]Op),
 	}
 	svr := NewServer(store)
 
@@ -84,25 +80,25 @@ func TestIncome(t *testing.T) {
 	svr.ServeHTTP(res, newIncomeRequest(t, id, 500))
 	assertStatus(t, res.Code, http.StatusCreated)
 	assertContentType(t, res, "application/json")
-	assertBalance(t, store.database[id].Float64(), 1500)
+	assertBalance(t, store.db[id].Balance.Float64(), 1500)
 
 	svr.ServeHTTP(httptest.NewRecorder(), newIncomeRequest(t, id, 500))
-	assertBalance(t, store.database[id].Float64(), 2000)
+	assertBalance(t, store.db[id].Balance.Float64(), 2000)
 
-	if len(store.history) == 0 {
+	if len(store.db[id].History) == 0 {
 		t.Fatalf("history is empty")
 	}
-	if time.Since(store.history[id][0].Time) > (5 * time.Second) {
-		t.Errorf("history: op 1: since op %v passed too much time", store.history[id][0].Time)
+	if time.Since(store.db[id].History[0].Time) > (5 * time.Second) {
+		t.Errorf("history: op 1: since op %v passed too much time", store.db[id].History[0].Time)
 	}
-	if store.history[id][0].Ruble.Float64() != 500 {
-		t.Errorf("history: op 1: got money %.2f want 500", store.history[id][0].Ruble.Float64())
+	if store.db[id].History[0].Ruble.Float64() != 500 {
+		t.Errorf("history: op 1: got money %.2f want 500", store.db[id].History[0].Ruble.Float64())
 	}
-	if store.history[id][0].Type != OpIncome {
-		t.Errorf("history: op 1: got Type %d want %q", store.history[id][0].Type, "income")
+	if store.db[id].History[0].Type != OpIncome {
+		t.Errorf("history: op 1: got Type %d want %q", store.db[id].History[0].Type, "income")
 	}
 
-	if len(store.history[20]) != 0 {
+	if len(store.db[20].History) != 0 {
 		t.Errorf("user 20 op history is not empty")
 	}
 }
