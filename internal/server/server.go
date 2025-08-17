@@ -56,6 +56,7 @@ func (f *FinanceServer) addIncome(w http.ResponseWriter, r *http.Request, user U
 	_ = json.NewEncoder(w).Encode(BalanceDTO{balance.Float64()})
 }
 
+// addExpense subtracts given amount from store balance and returns BalanceDTO with user updated balance
 func (f *FinanceServer) addExpense(w http.ResponseWriter, r *http.Request, user User) {
 	w.Header().Set("Content-Type", "application/json")
 

@@ -8,8 +8,6 @@ import (
 	"testing"
 )
 
-// to be
-// addExpense subtracts given money from store and returns BalanceDTO with user updated balance
 func TestExpense(t *testing.T) {
 	store := &StubStore{database: map[int]Ruble{
 		1:  NewRuble(1000),

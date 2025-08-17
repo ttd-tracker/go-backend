@@ -11,9 +11,10 @@ import (
 	"time"
 )
 
+// database and history should be merged, bc it has the same key and related to a single user
 type StubStore struct {
 	database map[int]Ruble
-	history  []Op
+	history  map[int][]Op
 }
 
 func (s *StubStore) GetUser(id int) User {
@@ -22,7 +23,7 @@ func (s *StubStore) GetUser(id int) User {
 
 func (s *StubStore) AddIncome(id int, income Ruble) Ruble {
 	s.database[id] = s.database[id].Add(income)
-	s.recordOp(Op{income, time.Now(), OpIncome})
+	s.recordOp(id, Op{income, time.Now(), OpIncome})
 	return s.database[id]
 }
 
@@ -31,15 +32,18 @@ func (s *StubStore) AddExpense(id int, expense Ruble) Ruble {
 	return s.database[id]
 }
 
-func (s *StubStore) recordOp(op Op) {
-	s.history = append(s.history, op)
+func (s *StubStore) recordOp(id int, op Op) {
+	s.history[id] = append(s.history[id], op)
 }
 
 func TestExtractBalance(t *testing.T) {
-	store := &StubStore{database: map[int]Ruble{
-		1:  NewRuble(1000),
-		20: NewRuble(5000),
-	}}
+	store := &StubStore{
+		database: map[int]Ruble{
+			1:  NewRuble(1000),
+			20: NewRuble(5000),
+		},
+		history: make(map[int][]Op),
+	}
 	svr := NewServer(store)
 
 	t.Run("get one's balance", func(t *testing.T) {
@@ -66,10 +70,13 @@ func TestExtractBalance(t *testing.T) {
 }
 
 func TestIncome(t *testing.T) {
-	store := &StubStore{database: map[int]Ruble{
-		1:  NewRuble(1000),
-		20: NewRuble(5000),
-	}}
+	store := &StubStore{
+		database: map[int]Ruble{
+			1:  NewRuble(1000),
+			20: NewRuble(5000),
+		},
+		history: make(map[int][]Op),
+	}
 	svr := NewServer(store)
 
 	id := 1
@@ -85,14 +92,18 @@ func TestIncome(t *testing.T) {
 	if len(store.history) == 0 {
 		t.Fatalf("history is empty")
 	}
-	if time.Since(store.history[0].Time) > (5 * time.Second) {
-		t.Errorf("history: op 1: since op %v passed too much time", store.history[0].Time)
+	if time.Since(store.history[id][0].Time) > (5 * time.Second) {
+		t.Errorf("history: op 1: since op %v passed too much time", store.history[id][0].Time)
 	}
-	if store.history[0].Ruble.Float64() != 500 {
-		t.Errorf("history: op 1: got money %.2f want 500", store.history[0].Ruble.Float64())
+	if store.history[id][0].Ruble.Float64() != 500 {
+		t.Errorf("history: op 1: got money %.2f want 500", store.history[id][0].Ruble.Float64())
 	}
-	if store.history[0].Type != OpIncome {
-		t.Errorf("history: op 1: got Type %d want %q", store.history[0].Type, "income")
+	if store.history[id][0].Type != OpIncome {
+		t.Errorf("history: op 1: got Type %d want %q", store.history[id][0].Type, "income")
+	}
+
+	if len(store.history[20]) != 0 {
+		t.Errorf("user 20 op history is not empty")
 	}
 }
 
